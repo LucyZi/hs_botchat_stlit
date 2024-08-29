@@ -1,5 +1,5 @@
 import streamlit as st
-from openai import OpenAI, OpenAIError
+from openai import OpenAI
 import pandas as pd
 import plotly.express as px
 import os
