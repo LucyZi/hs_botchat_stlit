@@ -76,7 +76,7 @@ if prompt := st.chat_input("Ask about the healthcare systems data..."):
             messages=messages
         )
         
-        # Stream the response to the chat
+        # Extract and display the assistant's response
         assistant_message = response['choices'][0]['message']['content']
         with st.chat_message("assistant"):
             st.markdown(assistant_message)
