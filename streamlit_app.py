@@ -19,7 +19,7 @@ if not openai_api_key:
     st.error("OpenAI API key is not set. Please set it in your Streamlit secrets or as an environment variable.")
     st.stop()
 
-# 设置 OpenAI API 密钥
+# Set OpenAI API key
 openai.api_key = openai_api_key
 
 # Load CSV data
