@@ -22,7 +22,6 @@ if not openai_api_key:
 # Load CSV data
 @st.cache_data
 def load_data():
-    # Assume your CSV file name is 'health_systems_data.csv'
     return pd.read_csv('health_systems_data.csv')
 
 df = load_data()
@@ -69,19 +68,18 @@ if prompt := st.chat_input("Ask about the healthcare systems data..."):
     ] + st.session_state.messages[-5:]  # Limit message history
 
     try:
-        stream = openai.ChatCompletion.create(
+        response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": m["role"], "content": m["content"]}
                 for m in messages
-            ],
-            stream=True,
+            ]
         )
         
         # Stream the response to the chat
         with st.chat_message("assistant"):
-            response = st.write_stream(stream)
-        st.session_state.messages.append({"role": "assistant", "content": response})
+            st.markdown(response.choices[0].message['content'])
+        st.session_state.messages.append({"role": "assistant", "content": response.choices[0].message['content']})
 
     except openai.error.RateLimitError:
         st.error("API rate limit exceeded. Please try again later.")
