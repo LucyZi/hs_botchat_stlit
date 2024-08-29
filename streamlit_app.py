@@ -1,5 +1,5 @@
 import streamlit as st
-import openai
+from openai import OpenAI, OpenAIError
 import pandas as pd
 import plotly.express as px
 import os
@@ -19,8 +19,8 @@ if not openai_api_key:
     st.error("OpenAI API key is not set. Please set it in your Streamlit secrets or as an environment variable.")
     st.stop()
 
-# 设置 OpenAI API 密钥
-openai.api_key = openai_api_key
+# Initialize the OpenAI client
+client = OpenAI(api_key=openai_api_key)
 
 # Load CSV data
 @st.cache_data
@@ -71,7 +71,7 @@ if prompt := st.chat_input("Ask about the healthcare systems data..."):
     ] + st.session_state.messages[-5:]  # Limit message history
 
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=messages
         )
@@ -82,7 +82,7 @@ if prompt := st.chat_input("Ask about the healthcare systems data..."):
             st.markdown(assistant_message)
         st.session_state.messages.append({"role": "assistant", "content": assistant_message})
 
-    except openai.error.OpenAIError as e:
+    except OpenAIError as e:
         st.error(f"OpenAI API Error: {str(e)}")
         time.sleep(5)  # Optional: Add a delay before retrying
 
