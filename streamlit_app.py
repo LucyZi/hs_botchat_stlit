@@ -4,6 +4,13 @@ import pandas as pd
 import plotly.express as px
 import os
 
+# 设置页面配置（移到最前面）
+st.set_page_config(
+    page_title="Healthcare Systems Data Chat",
+    page_icon="🏥",
+    layout="wide",
+)
+
 # 设置OpenAI API密钥
 # 首选从Streamlit的secrets中获取，如果不存在则从环境变量中获取
 openai_api_key = st.secrets.get("OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY")
@@ -22,13 +29,6 @@ def load_data():
     return pd.read_csv('health_systems_data.csv')
 
 df = load_data()
-
-# 设置页面配置
-st.set_page_config(
-    page_title="Healthcare Systems Data Chat",
-    page_icon="🏥",
-    layout="wide",
-)
 
 # 显示标题和描述
 st.title("🏥 Healthcare Systems Data Chat")
