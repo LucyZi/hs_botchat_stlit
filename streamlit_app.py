@@ -82,8 +82,8 @@ if prompt := st.chat_input("Ask about the healthcare systems data..."):
             st.markdown(assistant_message)
         st.session_state.messages.append({"role": "assistant", "content": assistant_message})
 
-    except openai.error.RateLimitError:
-        st.error("API rate limit exceeded. Please try again later.")
+    except openai.error.OpenAIError as e:
+        st.error(f"OpenAI API Error: {str(e)}")
         time.sleep(5)  # Optional: Add a delay before retrying
 
     except Exception as e:
