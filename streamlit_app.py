@@ -1,10 +1,11 @@
 import streamlit as st
-from openai import OpenAI
+from openai import OpenAI, error
 import pandas as pd
 import plotly.express as px
 import os
+import time
 
-# 设置页面配置（移到最前面）
+# 设置页面配置
 st.set_page_config(
     page_title="Healthcare Systems Data Chat",
     page_icon="🏥",
@@ -12,7 +13,6 @@ st.set_page_config(
 )
 
 # 设置OpenAI API密钥
-# 首选从Streamlit的secrets中获取，如果不存在则从环境变量中获取
 openai_api_key = st.secrets.get("OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY")
 
 if not openai_api_key:
@@ -69,21 +69,26 @@ if prompt := st.chat_input("Ask about the healthcare systems data..."):
     messages = [
         {"role": "system", "content": "You are a helpful assistant analyzing healthcare systems data. Use the provided data to answer questions accurately."},
         {"role": "user", "content": f"Here's a summary of the data:\n{df.describe().to_string()}\n\nNow, answer this question: {prompt}"}
-    ] + st.session_state.messages
+    ] + st.session_state.messages[-5:]  # 限制消息历史
 
-    stream = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": m["role"], "content": m["content"]}
-            for m in messages
-        ],
-        stream=True,
-    )
+    try:
+        stream = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": m["role"], "content": m["content"]}
+                for m in messages
+            ],
+            stream=True,
+        )
+        
+        # 将响应流式传输到聊天中
+        with st.chat_message("assistant"):
+            response = st.write_stream(stream)
+        st.session_state.messages.append({"role": "assistant", "content": response})
 
-    # 将响应流式传输到聊天中
-    with st.chat_message("assistant"):
-        response = st.write_stream(stream)
-    st.session_state.messages.append({"role": "assistant", "content": response})
+    except error.RateLimitError:
+        st.error("API rate limit exceeded. Please try again later.")
+        time.sleep(5)  # 可选：在重试前添加延迟
 
 # 添加数据预览功能
 if st.checkbox("Show data preview"):
