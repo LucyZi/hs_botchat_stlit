@@ -19,6 +19,9 @@ if not openai_api_key:
     st.error("OpenAI API key is not set. Please set it in your Streamlit secrets or as an environment variable.")
     st.stop()
 
+# 设置 OpenAI API 密钥
+openai.api_key = openai_api_key
+
 # Load CSV data
 @st.cache_data
 def load_data():
@@ -70,20 +73,21 @@ if prompt := st.chat_input("Ask about the healthcare systems data..."):
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
-            messages=[
-                {"role": m["role"], "content": m["content"]}
-                for m in messages
-            ]
+            messages=messages
         )
         
         # Stream the response to the chat
+        assistant_message = response['choices'][0]['message']['content']
         with st.chat_message("assistant"):
-            st.markdown(response.choices[0].message['content'])
-        st.session_state.messages.append({"role": "assistant", "content": response.choices[0].message['content']})
+            st.markdown(assistant_message)
+        st.session_state.messages.append({"role": "assistant", "content": assistant_message})
 
     except openai.error.RateLimitError:
         st.error("API rate limit exceeded. Please try again later.")
         time.sleep(5)  # Optional: Add a delay before retrying
+
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
 
 # Add data preview feature
 if st.checkbox("Show data preview"):
