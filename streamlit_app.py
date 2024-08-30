@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 from openai import OpenAI
+import openai
+import logging
 
 # Show title and description.
 st.title("💬 Chatbot")
@@ -43,17 +45,22 @@ if prompt := st.chat_input("What is up?"):
         st.markdown(prompt)
 
     # Generate a response using the OpenAI API.
-    stream = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": m["role"], "content": m["content"]}
-            for m in st.session_state.messages
-        ],
-        stream=True,
-    )
+    try:
+        stream = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": m["role"], "content": m["content"]}
+                for m in st.session_state.messages
+            ],
+            stream=True,
+        )
 
-    # Stream the response to the chat using `st.write_stream`, then store it in 
-    # session state.
-    with st.chat_message("assistant"):
-        response = st.write_stream(stream)
-    st.session_state.messages.append({"role": "assistant", "content": response})
+        # Stream the response to the chat using `st.write_stream`, then store it in 
+        # session state.
+        with st.chat_message("assistant"):
+            response = st.write_stream(stream)
+        st.session_state.messages.append({"role": "assistant", "content": response})
+
+    except openai.error.OpenAIError as e:
+        st.error(f"An error occurred: {e}")
+        logging.error(f"OpenAI API error: {e}")
