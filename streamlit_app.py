@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import openai
 import time
+from openai.error import RateLimitError, OpenAIError
 
 # Show title and description.
 st.title("💬 Chatbot")
@@ -62,11 +63,11 @@ else:
                         response += content
                         st.chat_message("assistant").markdown(content)
                     break
-                except openai.error.RateLimitError:
+                except RateLimitError:
                     retry_count += 1
                     st.warning("Rate limit reached. Retrying...")
                     time.sleep(2 ** retry_count)
-                except Exception as e:
+                except OpenAIError as e:
                     st.error(f"An error occurred: {e}")
                     break
 
