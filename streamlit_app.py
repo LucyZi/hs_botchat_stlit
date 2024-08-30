@@ -1,103 +1,59 @@
 import streamlit as st
-import openai
 import pandas as pd
-import plotly.express as px
-import os
-import time
+from openai import OpenAI
 
-# Set up page configuration
-st.set_page_config(
-    page_title="Healthcare Systems Data Chat",
-    page_icon="🏥",
-    layout="wide",
-)
-
-# Set OpenAI API key
-openai_api_key = st.secrets.get("OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY")
-
-if not openai_api_key:
-    st.error("OpenAI API key is not set. Please set it in your Streamlit secrets or as an environment variable.")
-    st.stop()
-
-# Set OpenAI API key
-openai.api_key = openai_api_key
-
-# Load CSV data
-@st.cache_data
-def load_data():
-    return pd.read_csv('health_systems_data.csv')
-
-df = load_data()
-
-# Display title and description
-st.title("🏥 Healthcare Systems Data Chat")
+# Show title and description.
+st.title("💬 Chatbot")
 st.write(
-    "This chatbot uses OpenAI's GPT-3.5 model to analyze healthcare systems data. "
-    "You can ask questions about the data, and the AI will provide insights based on the available information."
+    "This is a simple chatbot that uses OpenAI's GPT-3.5 model to generate responses. "
+    "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
+    "You can also learn how to build this app step by step by [following our tutorial](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps)."
 )
 
-# Create session state variable to store chat messages
+# Use the OpenAI API key stored in secrets
+openai_api_key = st.secrets["openai"]["api_key"]
+
+# Create an OpenAI client.
+client = OpenAI(api_key=openai_api_key)
+
+# Load the CSV file directly
+try:
+    data = pd.read_csv("health_systems_data.csv")
+    st.write("### Health Systems Data", data)
+except FileNotFoundError:
+    st.error("The file 'health_systems_data.csv' was not found. Please ensure it is in the correct directory.")
+
+# Create a session state variable to store the chat messages. This ensures that the
+# messages persist across reruns.
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display sample prompts
-with st.expander("Sample prompts", expanded=True):
-    st.write(
-        """
-        - What kind of information is in this dataset?
-        - What are the main trends in healthcare systems?
-        - How does the data vary across different regions?
-        - What are the key performance indicators for healthcare systems?
-        - Can you provide a summary of the healthcare system efficiency?
-        """
-    )
-
-# Display existing chat messages
+# Display the existing chat messages via `st.chat_message`.
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Create chat input field
-if prompt := st.chat_input("Ask about the healthcare systems data..."):
-    # Store and display the current prompt
+# Create a chat input field to allow the user to enter a message. This will display
+# automatically at the bottom of the page.
+if prompt := st.chat_input("What is up?"):
+
+    # Store and display the current prompt.
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Use OpenAI API to generate a response
-    messages = [
-        {"role": "system", "content": "You are a helpful assistant analyzing healthcare systems data. Use the provided data to answer questions accurately."},
-        {"role": "user", "content": f"Here's a summary of the data:\n{df.describe().to_string()}\n\nNow, answer this question: {prompt}"}
-    ] + st.session_state.messages[-5:]  # Limit message history
+    # Generate a response using the OpenAI API.
+    stream = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": m["role"], "content": m["content"]}
+            for m in st.session_state.messages
+        ],
+        stream=True,
+    )
 
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=messages
-        )
-        
-        # Extract and display the assistant's response
-        assistant_message = response.choices[0].message["content"]
-        with st.chat_message("assistant"):
-            st.markdown(assistant_message)
-        st.session_state.messages.append({"role": "assistant", "content": assistant_message})
-
-    except openai.error.OpenAIError as e:
-        st.error(f"OpenAI API Error: {str(e)}")
-        time.sleep(5)  # Optional: Add a delay before retrying
-
-    except Exception as e:
-        st.error(f"An error occurred: {e}")
-
-# Add data preview feature
-if st.checkbox("Show data preview"):
-    st.write(df.head())
-
-# Add data visualization feature
-if st.checkbox("Show data visualization"):
-    st.write("Select columns for visualization:")
-    numeric_columns = df.select_dtypes(include=['float64', 'int64']).columns
-    selected_columns = st.multiselect("Choose columns", numeric_columns)
-    if selected_columns:
-        fig = px.line(df, y=selected_columns)
-        st.plotly_chart(fig)
+    # Stream the response to the chat using `st.write_stream`, then store it in 
+    # session state.
+    with st.chat_message("assistant"):
+        response = st.write_stream(stream)
+    st.session_state.messages.append({"role": "assistant", "content": response})
