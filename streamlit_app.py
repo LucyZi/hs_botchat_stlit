@@ -1,8 +1,7 @@
 import streamlit as st
 import pandas as pd
-from openai import OpenAI
 import openai
-import logging
+from openai.error import OpenAIError, RateLimitError
 
 # Show title and description.
 st.title("💬 Chatbot")
@@ -16,7 +15,7 @@ st.write(
 openai_api_key = st.secrets["openai"]["api_key"]
 
 # Create an OpenAI client.
-client = OpenAI(api_key=openai_api_key)
+client = openai.OpenAI(api_key=openai_api_key)
 
 # Load the CSV file directly
 try:
@@ -61,6 +60,7 @@ if prompt := st.chat_input("What is up?"):
             response = st.write_stream(stream)
         st.session_state.messages.append({"role": "assistant", "content": response})
 
-    except openai.error.OpenAIError as e:
+    except RateLimitError as e:
+        st.error("You have exceeded your API quota. Please check your plan and billing details.")
+    except OpenAIError as e:
         st.error(f"An error occurred: {e}")
-        logging.error(f"OpenAI API error: {e}")
