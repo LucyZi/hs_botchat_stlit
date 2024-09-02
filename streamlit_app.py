@@ -38,12 +38,13 @@ if prompt := st.chat_input("Ask a question about the data or anything else:"):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Provide context for the model that describes the dataset and general task
+    # Provide context for the model that describes the dataset
     context = (
         "You are a data assistant. The user will ask questions about a dataset. "
-        "The dataset has columns with various types of data. Your task is to generate a valid Python Pandas command "
-        "that can be executed on a dataframe named 'data' to answer the user's question. "
-        "If the question involves counting rows, filtering by categories, or summarizing data, generate the appropriate code."
+        "The dataset has the following columns: " + ", ".join(data.columns) + ". "
+        "Your task is to generate a valid Python Pandas command that can be executed "
+        "on a dataframe named 'data' to answer the user's question. If the question involves a specific category, "
+        "and the category includes a keyword (e.g., 'teaching'), generate code that correctly filters or counts all categories that contain that keyword. Return only the code, no explanation."
     )
 
     # Combine the context with the user messages
