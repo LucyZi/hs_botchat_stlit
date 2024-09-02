@@ -44,7 +44,8 @@ if prompt := st.chat_input("Ask a question about the data or anything else:"):
         "The dataset has the following columns: " + ", ".join(data.columns) + ". "
         "Your task is to generate a valid Python Pandas command that can be executed "
         "on a dataframe named 'data' to answer the user's question. "
-        "If the question involves categories such as 'teaching', generate code that filters rows where the category contains the keyword, like 'teaching'."
+        "If the question involves counting or filtering based on categories (e.g., 'teaching'), "
+        "detect the appropriate column and apply the filtering or counting operation accordingly."
     )
 
     # Combine the context with the user messages
@@ -62,10 +63,6 @@ if prompt := st.chat_input("Ask a question about the data or anything else:"):
     # Display the generated code for debugging purposes
     st.write("Generated code:")
     st.code(code)
-
-    # If the generated code does not include the expected filtering for teaching categories, adjust it
-    if "teaching" in prompt.lower() and "contains" not in code.lower():
-        code = f"result = data[data['Systemwide teaching intensity'].str.contains('teaching', case=False)].shape[0]"
 
     # Try to execute the generated code and capture the result
     try:
