@@ -1,14 +1,11 @@
 import streamlit as st
 import pandas as pd
 from openai import OpenAI
-from langchain.chains import LLMChain
-from langchain.prompts import PromptTemplate
-from langchain.llms import OpenAI as LangChainOpenAI
 
-# Show title and description
-st.title("💬 Intelligent Data Analysis Chatbot with LangChain")
+# Show title and description.
+st.title("💬 Intelligent Data Analysis Chatbot")
 st.write(
-    "This chatbot uses LangChain combined with OpenAI's GPT-4 model to analyze your data intelligently."
+    "This chatbot uses OpenAI's GPT-4 model combined with Python's data analysis capabilities to answer your questions."
 )
 
 # Load the OpenAI API key from Streamlit secrets
@@ -21,39 +18,55 @@ data = pd.read_csv("health_systems_data.csv")
 st.write("Here is a preview of the first 10 rows of the dataset:")
 st.dataframe(data.head(10))
 
-# Initialize LangChain's OpenAI LLM
-llm = LangChainOpenAI(openai_api_key=openai_api_key)
+# Create an OpenAI client.
+client = OpenAI(api_key=openai_api_key)
 
-# Define a prompt template for generating Pandas code
-template = """You are an expert in data analysis. A user has asked you a question about the following dataset:
-{data_description}
-Please generate a valid Python Pandas code to answer the user's question: "{user_question}"
-The dataset is stored in a Pandas DataFrame called 'data'.
-Return only the Python code, no explanations.
-"""
+# Create a session state variable to store the chat messages. This ensures that the messages persist across reruns.
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-# Create a LangChain prompt
-prompt = PromptTemplate(input_variables=["data_description", "user_question"], template=template)
+# Display the existing chat messages via `st.chat_message`.
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-# Create an LLMChain for generating code
-chain = LLMChain(llm=llm, prompt=prompt)
+# Create a chat input field to allow the user to enter a message. This will display automatically at the bottom of the page.
+if prompt := st.chat_input("Ask a question about the data or anything else:"):
 
-# Create a chat input field to allow the user to enter a message
-if prompt_text := st.chat_input("Ask a question about the data:"):
+    # Store and display the current prompt.
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
-    # Describe the dataset columns
-    data_description = ", ".join(data.columns)
+    # Provide context for the model that describes the dataset
+    context = (
+        "You are a data assistant. The user will ask questions about a dataset. "
+        "The dataset has the following columns: " + ", ".join(data.columns) + ". "
+        "Your task is to generate a valid Python Pandas command that can be executed "
+        "on a dataframe named 'data' to answer the user's question. "
+        "Make sure to correctly handle different categories within a column, such as 'major teaching', 'minor teaching', and 'nonteaching' in the 'Systemwide teaching intensity' column."
+    )
 
-    # Generate the Pandas code using LangChain
-    generated_code = chain.run(data_description=data_description, user_question=prompt_text)
+    # Combine the context with the user messages
+    messages = [{"role": "system", "content": context}]
+    messages.append({"role": "user", "content": prompt})
 
-    st.write("Generated code:")
-    st.code(generated_code)
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=messages,
+        max_tokens=200,
+    )
 
+    code = response.choices[0].message.content.strip("```").strip()  # Remove code block formatting if present
+
+    # Try to execute the generated code and capture the result
     try:
-        # Execute the generated code and show the result
-        result = eval(generated_code)
-        st.write("Result:")
-        st.write(result)
+        result = eval(code)
+        response_message = f"The result of your query is:\n{result}"
     except Exception as e:
-        st.write(f"An error occurred: {e}")
+        response_message = f"Sorry, I encountered an error while processing your request:\n{e}"
+
+    # Display the result or error in the chat
+    st.session_state.messages.append({"role": "assistant", "content": response_message})
+    with st.chat_message("assistant"):
+        st.markdown(response_message)
