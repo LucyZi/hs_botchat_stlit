@@ -1,41 +1,38 @@
 import streamlit as st
-import pandas as pd
 from openai import OpenAI
 
 # Show title and description.
-st.title("💬 Health Systems Data Chatbot")
+st.title("💬 Chatbot")
 st.write(
-    "This is a simple chatbot that uses OpenAI's GPT-3.5 model to generate responses based on your CSV data. "
-    "To use this app, you need to provide an OpenAI API key."
+    "This is a simple chatbot that uses OpenAI's GPT-3.5 model to generate responses. "
+    "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
+    "You can also learn how to build this app step by step by [following our tutorial](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps)."
 )
 
-# Ask user for their OpenAI API key via st.text_input.
+# Ask user for their OpenAI API key via `st.text_input`.
+# Alternatively, you can store the API key in `./.streamlit/secrets.toml` and access it
+# via `st.secrets`, see https://docs.streamlit.io/develop/concepts/connections/secrets-management
 openai_api_key = st.text_input("OpenAI API Key", type="password")
 if not openai_api_key:
     st.info("Please add your OpenAI API key to continue.", icon="🗝️")
 else:
-    # Initialize OpenAI client with the API key
+
+    # Create an OpenAI client.
     client = OpenAI(api_key=openai_api_key)
 
-    # Load the CSV data
-    csv_path = 'health_systems_data.csv'  # Path to your CSV file in the same directory
-    df = pd.read_csv(csv_path)
-
-    # Show the first few rows of the data to the user
-    st.write("Here is a preview of the data:")
-    st.dataframe(df.head())
-
-    # Create a session state variable to store the chat messages.
+    # Create a session state variable to store the chat messages. This ensures that the
+    # messages persist across reruns.
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Display the existing chat messages via st.chat_message.
+    # Display the existing chat messages via `st.chat_message`.
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Create a chat input field to allow the user to enter a message.
-    if prompt := st.chat_input("Ask something about the data"):
+    # Create a chat input field to allow the user to enter a message. This will display
+    # automatically at the bottom of the page.
+    if prompt := st.chat_input("What is up?"):
 
         # Store and display the current prompt.
         st.session_state.messages.append({"role": "user", "content": prompt})
@@ -43,22 +40,17 @@ else:
             st.markdown(prompt)
 
         # Generate a response using the OpenAI API.
-        df_description = df.describe().to_string()
-        response_prompt = f"The user asked: {prompt}\nHere is a brief description of the data:\n{df_description}"
-
-        stream = client.completions.create(
+        stream = client.chat.completions.create(
             model="gpt-3.5-turbo",
-            prompt=response_prompt,
-            max_tokens=150,
+            messages=[
+                {"role": m["role"], "content": m["content"]}
+                for m in st.session_state.messages
+            ],
             stream=True,
         )
 
-        # Stream the response to the chat using st.write_stream, then store it in session state.
-        response = ""
-        for chunk in stream:
-            response += chunk["choices"][0]["text"]
-
+        # Stream the response to the chat using `st.write_stream`, then store it in 
+        # session state.
         with st.chat_message("assistant"):
-            st.markdown(response)
-        
+            response = st.write_stream(stream)
         st.session_state.messages.append({"role": "assistant", "content": response})
