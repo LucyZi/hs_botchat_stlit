@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import openai
+from openai import OpenAI
 
 # Show title and description.
 st.title("💬 Health Systems Data Chatbot")
@@ -14,8 +14,8 @@ openai_api_key = st.text_input("OpenAI API Key", type="password")
 if not openai_api_key:
     st.info("Please add your OpenAI API key to continue.", icon="🗝️")
 else:
-    # Initialize OpenAI API client with the API key
-    openai.api_key = openai_api_key
+    # Create an OpenAI client.
+    client = OpenAI(api_key=openai_api_key)
 
     # Load the CSV data
     csv_path = 'health_systems_data.csv'  # Path to your CSV file in the same directory
@@ -46,17 +46,19 @@ else:
         df_description = df.describe().to_string()
         response_prompt = f"The user asked: {prompt}\nHere is a brief description of the data:\n{df_description}"
 
-        response = openai.ChatCompletion.create(
+        stream = client.completions.create(
             model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that can answer questions based on the data provided."},
-                {"role": "user", "content": response_prompt}
-            ]
+            prompt=response_prompt,
+            max_tokens=150,
+            stream=True,
         )
 
         # Stream the response to the chat using st.write_stream, then store it in session state.
-        assistant_message = response.choices[0].message["content"]
+        response = ""
+        for chunk in stream:
+            response += chunk["choices"][0]["text"]
+
         with st.chat_message("assistant"):
-            st.markdown(assistant_message)
+            st.markdown(response)
         
-        st.session_state.messages.append({"role": "assistant", "content": assistant_message})
+        st.session_state.messages.append({"role": "assistant", "content": response})
