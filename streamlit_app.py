@@ -43,15 +43,14 @@ else:
         try:
             response = openai.ChatCompletion.create(
                 model="gpt-4",  # 使用 GPT-4 模型
-                messages=[
-                    {"role": m["role"], "content": m["content"]}
-                    for m in st.session_state.messages
-                ],
+                messages=st.session_state.messages,
             )
 
             assistant_message = response['choices'][0]['message']['content']
             st.session_state.messages.append({"role": "assistant", "content": assistant_message})
             st.markdown(f"**Assistant:** {assistant_message}")
 
-        except Exception as e:  # 捕获所有异常
-            st.error(f"An error occurred: {e}")
+        except openai.error.OpenAIError as e:  # 捕获所有OpenAI API相关异常
+            st.error(f"OpenAI API Error: {e}")
+        except Exception as e:  # 捕获其他异常
+            st.error(f"An unexpected error occurred: {e}")
