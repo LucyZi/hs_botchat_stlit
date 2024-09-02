@@ -10,47 +10,48 @@ st.write(
     "You can also learn how to build this app step by step by [following our tutorial](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps)."
 )
 
-# 让用户通过 `st.text_input` 输入他们的 OpenAI API 密钥
-openai_api_key = st.text_input("OpenAI API Key", type="password")
-if not openai_api_key:
-    st.info("Please add your OpenAI API key to continue.", icon="🗝️")
-else:
-    # 设置 OpenAI API 密钥
-    openai.api_key = openai_api_key
 
-    # 加载 CSV 文件
-    try:
-        data = pd.read_csv("health_systems_data.csv")
-        st.write("### Health Systems Data", data)
-    except FileNotFoundError:
-        st.error("The file 'health_systems_data.csv' was not found. Please ensure it is in the correct directory.")
+# 从 Streamlit 的 secrets 中获取 OpenAI API 密钥
+openai.api_key = st.secrets["openai"]["openai_api_key"]
 
-    # 创建一个会话状态变量来存储聊天消息
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+# 加载 CSV 数据
+@st.cache_data
+def load_data():
+    df = pd.read_csv('health_systems_data.csv')
+    return df
 
-    # 显示已有的聊天消息
-    for message in st.session_state.messages:
-        st.markdown(f"**{message['role'].capitalize()}:** {message['content']}")
+df = load_data()
 
-    # 创建一个聊天输入字段
-    if prompt := st.text_input("Enter your question:"):
-        # 存储并显示当前的用户输入
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        st.markdown(f"**User:** {prompt}")
+# 生成基于 CSV 数据的回答
+def generate_response(question, df):
+    # 将数据框转换为字符串
+    data_str = df.to_csv(index=False)
 
-        # 使用 OpenAI API 生成响应
-        try:
-            response = openai.ChatCompletion.create(
-                model="gpt-4",  # 使用 GPT-4 模型
-                messages=st.session_state.messages,
-            )
+    # 构建 Prompt，提示 GPT 模型数据内容和用户问题
+    prompt = f"Here is the data:\n\n{data_str}\n\nBased on this data, please answer the following question:\n\n{question}\n\nAnswer:"
+    
+    # 使用 OpenAI GPT 模型生成回答
+    response = openai.Completion.create(
+        engine="text-davinci-003",
+        prompt=prompt,
+        max_tokens=150,
+        temperature=0.2,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0
+    )
+    
+    return response.choices[0].text.strip()
 
-            assistant_message = response['choices'][0]['message']['content']
-            st.session_state.messages.append({"role": "assistant", "content": assistant_message})
-            st.markdown(f"**Assistant:** {assistant_message}")
+# Streamlit 应用的界面
+st.title("Health Systems Data 问答机器人")
 
-        except openai.error.OpenAIError as e:  # 捕获所有OpenAI API相关异常
-            st.error(f"OpenAI API Error: {e}")
-        except Exception as e:  # 捕获其他异常
-            st.error(f"An unexpected error occurred: {e}")
+st.write("上传的 CSV 数据将用于回答您提出的任何问题。")
+
+question = st.text_input("输入您的问题:")
+
+if question:
+    response = generate_response(question, df)
+    st.write("回答:")
+    st.write(response)
+
