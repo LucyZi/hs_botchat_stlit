@@ -40,21 +40,28 @@ if prompt := st.chat_input("Ask a question about the data or anything else:"):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Generate a response using the OpenAI API with additional context about the data
-    messages = [
-        {"role": "system", "content": "You are a data expert who can help answer questions about a dataset."},
-        {"role": "system", "content": f"The dataset contains the following columns: {', '.join(data.columns)}"},
-        {"role": "system", "content": "Please answer the user's question based on the dataset or provide insights where possible."},
-    ] + st.session_state.messages
+    # Prepare a context for the model that describes the dataset
+    context = (
+        "You are a data expert. You have access to the following dataset. "
+        "Here are the columns of the dataset: "
+        f"{', '.join(data.columns)}. "
+        "The user may ask questions related to this dataset or anything else. "
+        "If the question is about the dataset, try to derive the answer from the data "
+        "directly or give an appropriate suggestion on how to get the answer."
+    )
 
+    # Combine the context with the user messages
+    messages = [{"role": "system", "content": context}] + st.session_state.messages
+
+    # Generate a response using the OpenAI API
     response = client.chat.completions.create(
         model="gpt-4",
         messages=messages,
-        max_tokens=150,  # Adjust the max_tokens if needed
+        max_tokens=200,  # Adjust max tokens as needed
     )
 
     # Display the response in the chat
-    assistant_message = response.choices[0].message.content  # Update this line
+    assistant_message = response.choices[0].message['content']
+    st.session_state.messages.append({"role": "assistant", "content": assistant_message})
     with st.chat_message("assistant"):
         st.markdown(assistant_message)
-    st.session_state.messages.append({"role": "assistant", "content": assistant_message})
