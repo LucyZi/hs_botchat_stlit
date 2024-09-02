@@ -44,8 +44,8 @@ if prompt := st.chat_input("Ask a question about the data or anything else:"):
         "The dataset has the following columns: " + ", ".join(data.columns) + ". "
         "Your task is to generate a valid Python Pandas command that can be executed "
         "on a dataframe named 'data' to answer the user's question. "
-        "If the question involves counting or filtering based on categories, automatically detect the appropriate column "
-        "and apply the filtering or counting operation accordingly."
+        "If the question involves counting or filtering based on categories (e.g., a column containing categories like 'teaching' or others), "
+        "detect the appropriate column and apply the filtering or counting operation accordingly."
     )
 
     # Combine the context with the user messages
@@ -65,11 +65,18 @@ if prompt := st.chat_input("Ask a question about the data or anything else:"):
     st.code(code)
 
     # Automatically correct the code if it doesn't handle categorical filtering properly
-    if any(cat in prompt.lower() for cat in data.columns) and "str.contains" not in code:
-        for col in data.columns:
-            if any(word in prompt.lower() for word in col.lower().split()):
-                code = f"result = data[data['{col}'].str.contains('{prompt.split()[-1]}', case=False)].shape[0]"
+    corrected_code = None
+    for col in data.columns:
+        # 如果用户的问题中包含某个列名的部分或完整关键字
+        if any(word in prompt.lower() for word in col.lower().split()):
+            # 检查列是否是分类变量并包含关键词
+            if data[col].dtype == object:
+                last_word = prompt.split()[-1]
+                corrected_code = f"result = data[data['{col}'].str.contains('{last_word}', case=False)].shape[0]"
                 break
+
+    if corrected_code:
+        code = corrected_code
 
     # Try to execute the generated code and capture the result
     try:
