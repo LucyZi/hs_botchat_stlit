@@ -5,7 +5,7 @@ from openai import OpenAI
 # Show title and description.
 st.title("💬 Chatbot")
 st.write(
-    "This is a simple chatbot that uses OpenAI's GPT-3.5 model to generate responses. "
+    "This is a simple chatbot that uses OpenAI's GPT-4 model to generate responses. "
     "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
     "You can also learn how to build this app step by step by [following our tutorial](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps)."
 )
@@ -19,6 +19,10 @@ if not openai_api_key:
 else:
     # Load the CSV data
     data = pd.read_csv("health_systems_data.csv")
+
+    # Display the first 10 rows of the dataset as a preview
+    st.write("Here is a preview of the first 10 rows of the dataset:")
+    st.dataframe(data.head(10))
 
     # Create an OpenAI client.
     client = OpenAI(api_key=openai_api_key)
@@ -43,8 +47,6 @@ else:
             st.markdown(prompt)
 
         # Extract information from the CSV data based on the user's input
-        # For simplicity, we're going to check if the user's input contains any column names
-        # and return the corresponding data
         response = "I couldn't find any matching information in the data."
 
         for col in data.columns:
@@ -59,7 +61,7 @@ else:
 
         # Generate a response using the OpenAI API.
         stream = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4",
             messages=[
                 {"role": m["role"], "content": m["content"]}
                 for m in st.session_state.messages
