@@ -3,7 +3,7 @@ import pandas as pd
 from openai import OpenAI
 
 # Show title and description.
-st.title("💬 Data Analysis Chatbot")
+st.title("💬 Intelligent Data Analysis Chatbot")
 st.write(
     "This chatbot uses OpenAI's GPT-4 model combined with Python's data analysis capabilities to answer your questions."
 )
@@ -38,15 +38,16 @@ if prompt := st.chat_input("Ask a question about the data or anything else:"):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Use GPT-4 to generate a Pandas command based on the user's query
-    system_prompt = (
+    # Provide context for the model that describes the dataset
+    context = (
         "You are a data assistant. The user will ask questions about a dataset. "
+        "The dataset has the following columns: " + ", ".join(data.columns) + ". "
         "Your task is to generate a valid Python Pandas command that can be executed "
         "on a dataframe named 'data' to answer the user's question. Return only the code, no explanation."
     )
 
     # Combine the context with the user messages
-    messages = [{"role": "system", "content": system_prompt}]
+    messages = [{"role": "system", "content": context}]
     messages.append({"role": "user", "content": prompt})
 
     response = client.chat.completions.create(
@@ -55,7 +56,7 @@ if prompt := st.chat_input("Ask a question about the data or anything else:"):
         max_tokens=150,
     )
 
-    code = response.choices[0].message.content.strip("```")  # Remove code block formatting if present
+    code = response.choices[0].message.content.strip("```").strip()  # Remove code block formatting if present
 
     # Try to execute the generated code and capture the result
     try:
