@@ -54,7 +54,7 @@ if prompt := st.chat_input("Ask a question about the data or anything else:"):
     )
 
     # Display the response in the chat
-    assistant_message = response.choices[0].message['content']
+    assistant_message = response.choices[0].message.content  # Update this line
     with st.chat_message("assistant"):
         st.markdown(assistant_message)
     st.session_state.messages.append({"role": "assistant", "content": assistant_message})
