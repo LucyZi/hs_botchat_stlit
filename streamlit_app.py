@@ -38,12 +38,13 @@ if prompt := st.chat_input("Ask a question about the data or anything else:"):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Provide context for the model that describes the dataset
+    # Provide context for the model that describes the dataset and general task
     context = (
         "You are a data assistant. The user will ask questions about a dataset. "
-        "The dataset has the following columns: " + ", ".join(data.columns) + ". "
-        "Your task is to generate a valid Python Pandas command that can be executed "
-        "on a dataframe named 'data' to answer the user's question. Return only the code, no explanation."
+        "The dataset has columns with categorical variables. Your task is to generate a valid Python Pandas command "
+        "that can be executed on a dataframe named 'data' to answer the user's question. "
+        "If the question involves counting categories or filtering by categories, generate the appropriate code. "
+        "If the question is more complex, generate code that handles the required operations in a clear and efficient way."
     )
 
     # Combine the context with the user messages
@@ -53,7 +54,7 @@ if prompt := st.chat_input("Ask a question about the data or anything else:"):
     response = client.chat.completions.create(
         model="gpt-4",
         messages=messages,
-        max_tokens=150,
+        max_tokens=200,
     )
 
     code = response.choices[0].message.content.strip("```").strip()  # Remove code block formatting if present
