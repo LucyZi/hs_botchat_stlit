@@ -55,7 +55,7 @@ if prompt := st.chat_input("Ask a question about the data or anything else:"):
         max_tokens=150,
     )
 
-    code = response.choices[0].message['content'].strip("```")  # Remove code block formatting if present
+    code = response.choices[0].message.content.strip("```")  # Remove code block formatting if present
 
     # Try to execute the generated code and capture the result
     try:
