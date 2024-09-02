@@ -14,7 +14,7 @@ openai_api_key = st.text_input("OpenAI API Key", type="password")
 if not openai_api_key:
     st.info("Please add your OpenAI API key to continue.", icon="🗝️")
 else:
-    # Create an OpenAI client.
+    # Initialize OpenAI client with the API key
     client = OpenAI(api_key=openai_api_key)
 
     # Load the CSV data
