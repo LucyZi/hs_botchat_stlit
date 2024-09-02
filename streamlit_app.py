@@ -18,7 +18,7 @@ else:
     client = OpenAI(api_key=openai_api_key)
 
     # Load the CSV data
-    csv_path = '/mnt/data/health_systems_data.csv'  # Path to your uploaded CSV file
+    csv_path = 'health_systems_data.csv'  # Path to your uploaded CSV file
     df = pd.read_csv(csv_path)
 
     # Show the first few rows of the data to the user
