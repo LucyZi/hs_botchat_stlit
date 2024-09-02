@@ -41,10 +41,9 @@ if prompt := st.chat_input("Ask a question about the data or anything else:"):
     # Provide context for the model that describes the dataset and general task
     context = (
         "You are a data assistant. The user will ask questions about a dataset. "
-        "The dataset has columns with categorical variables. Your task is to generate a valid Python Pandas command "
+        "The dataset has columns with various types of data. Your task is to generate a valid Python Pandas command "
         "that can be executed on a dataframe named 'data' to answer the user's question. "
-        "If the question involves counting categories or filtering by categories, generate the appropriate code. "
-        "If the question is more complex, generate code that handles the required operations in a clear and efficient way."
+        "If the question involves counting rows, filtering by categories, or summarizing data, generate the appropriate code."
     )
 
     # Combine the context with the user messages
@@ -54,10 +53,14 @@ if prompt := st.chat_input("Ask a question about the data or anything else:"):
     response = client.chat.completions.create(
         model="gpt-4",
         messages=messages,
-        max_tokens=200,
+        max_tokens=150,
     )
 
     code = response.choices[0].message.content.strip("```").strip()  # Remove code block formatting if present
+
+    # Display the generated code for debugging purposes
+    st.write("Generated code:")
+    st.code(code)
 
     # Try to execute the generated code and capture the result
     try:
