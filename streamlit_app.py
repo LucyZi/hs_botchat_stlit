@@ -3,9 +3,9 @@ import pandas as pd
 from openai import OpenAI
 
 # Show title and description.
-st.title("💬 Chatbot")
+st.title("💬 Data Analysis Chatbot")
 st.write(
-    "This is a simple chatbot that uses OpenAI's GPT-4 model to generate responses."
+    "This chatbot uses OpenAI's GPT-4 model combined with Python's data analysis capabilities to answer your questions."
 )
 
 # Load the OpenAI API key from Streamlit secrets
@@ -21,8 +21,7 @@ st.dataframe(data.head(10))
 # Create an OpenAI client.
 client = OpenAI(api_key=openai_api_key)
 
-# Create a session state variable to store the chat messages. This ensures that the
-# messages persist across reruns.
+# Create a session state variable to store the chat messages. This ensures that the messages persist across reruns.
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -31,8 +30,7 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Create a chat input field to allow the user to enter a message. This will display
-# automatically at the bottom of the page.
+# Create a chat input field to allow the user to enter a message. This will display automatically at the bottom of the page.
 if prompt := st.chat_input("Ask a question about the data or anything else:"):
 
     # Store and display the current prompt.
@@ -40,28 +38,33 @@ if prompt := st.chat_input("Ask a question about the data or anything else:"):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Prepare a context for the model that describes the dataset
-    context = (
-        "You are a data expert. You have access to the following dataset. "
-        "Here are the columns of the dataset: "
-        f"{', '.join(data.columns)}. "
-        "The user may ask questions related to this dataset or anything else. "
-        "If the question is about the dataset, try to derive the answer from the data "
-        "directly or give an appropriate suggestion on how to get the answer."
+    # Use GPT-4 to generate a Pandas command based on the user's query
+    system_prompt = (
+        "You are a data assistant. The user will ask questions about a dataset. "
+        "Your task is to generate a valid Python Pandas command that can be executed "
+        "on a dataframe named 'data' to answer the user's question. Return only the code, no explanation."
     )
 
     # Combine the context with the user messages
-    messages = [{"role": "system", "content": context}] + st.session_state.messages
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.append({"role": "user", "content": prompt})
 
-    # Generate a response using the OpenAI API
     response = client.chat.completions.create(
         model="gpt-4",
         messages=messages,
-        max_tokens=200,  # Adjust max tokens as needed
+        max_tokens=150,
     )
 
-    # Display the response in the chat
-    assistant_message = response.choices[0].message.content  # Corrected access method
-    st.session_state.messages.append({"role": "assistant", "content": assistant_message})
+    code = response.choices[0].message['content'].strip("```")  # Remove code block formatting if present
+
+    # Try to execute the generated code and capture the result
+    try:
+        result = eval(code)
+        response_message = f"The result of your query is:\n{result}"
+    except Exception as e:
+        response_message = f"Sorry, I encountered an error while processing your request:\n{e}"
+
+    # Display the result or error in the chat
+    st.session_state.messages.append({"role": "assistant", "content": response_message})
     with st.chat_message("assistant"):
-        st.markdown(assistant_message)
+        st.markdown(response_message)
