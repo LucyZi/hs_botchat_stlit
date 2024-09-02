@@ -1,57 +1,64 @@
 import streamlit as st
 import pandas as pd
-import openai
+from openai import OpenAI
 
-# 显示标题和描述
-st.title("💬 Chatbot")
+# Show title and description
+st.title("💬 Health Systems Data Chatbot")
 st.write(
-    "This is a simple chatbot that uses OpenAI's GPT-4 model to generate responses. "
-    "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
-    "You can also learn how to build this app step by step by [following our tutorial](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps)."
+    "This is a simple chatbot that uses OpenAI's GPT-3.5 model to generate responses based on your CSV data. "
+    "To use this app, you need to provide an OpenAI API key."
 )
 
+# Ask user for their OpenAI API key via `st.text_input`
+openai_api_key = st.text_input("OpenAI API Key", type="password")
+if not openai_api_key:
+    st.info("Please add your OpenAI API key to continue.", icon="🗝️")
+else:
+    # Create an OpenAI client
+    client = OpenAI(api_key=openai_api_key)
 
-# 从 Streamlit 的 secrets 中获取 OpenAI API 密钥
-openai.api_key = st.secrets["openai"]["openai_api_key"]
+    # Load the CSV data
+    csv_path = '/mnt/data/health_systems_data.csv'  # Path to your uploaded CSV file
+    df = pd.read_csv(csv_path)
 
-# 加载 CSV 数据
-@st.cache_data
-def load_data():
-    df = pd.read_csv('health_systems_data.csv')
-    return df
+    # Show the first few rows of the data to the user
+    st.write("Here is a preview of the data:")
+    st.dataframe(df.head())
 
-df = load_data()
+    # Create a session state variable to store the chat messages
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-# 生成基于 CSV 数据的回答
-def generate_response(question, df):
-    # 将数据框转换为字符串
-    data_str = df.to_csv(index=False)
+    # Display the existing chat messages
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-    # 构建 Prompt，提示 GPT 模型数据内容和用户问题
-    prompt = f"Here is the data:\n\n{data_str}\n\nBased on this data, please answer the following question:\n\n{question}\n\nAnswer:"
-    
-    # 使用 OpenAI GPT 模型生成回答
-    response = openai.Completion.create(
-        engine="text-davinci-003",
-        prompt=prompt,
-        max_tokens=150,
-        temperature=0.2,
-        top_p=1,
-        frequency_penalty=0,
-        presence_penalty=0
-    )
-    
-    return response.choices[0].text.strip()
+    # Create a chat input field to allow the user to enter a message
+    if prompt := st.chat_input("Ask something about the data"):
 
-# Streamlit 应用的界面
-st.title("Health Systems Data 问答机器人")
+        # Store and display the current prompt
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
 
-st.write("上传的 CSV 数据将用于回答您提出的任何问题。")
+        # Generate a response based on the user's input and the data
+        # You can use the user's prompt along with some part of the data to generate a more specific query
+        # For simplicity, here we'll just forward the question to the GPT model
+        df_description = df.describe().to_string()
+        response_prompt = f"The user asked: {prompt}\nHere is a brief description of the data:\n{df_description}"
+        
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that can answer questions based on the data provided."},
+                {"role": "user", "content": response_prompt}
+            ]
+        )
 
-question = st.text_input("输入您的问题:")
-
-if question:
-    response = generate_response(question, df)
-    st.write("回答:")
-    st.write(response)
-
+        # Display the response
+        with st.chat_message("assistant"):
+            st.markdown(response.choices[0].message["content"])
+        
+        # Store the response in session state
+        st.session_state.messages.append({"role": "assistant", "content": response.choices[0].message["content"]})
