@@ -54,7 +54,7 @@ else:
             st.session_state.messages.append({"role": "assistant", "content": assistant_message})
             st.markdown(f"**Assistant:** {assistant_message}")
 
-        except openai.error.OpenAIError as e:
+        except openai.error.OpenAIError as e:  # 这里去掉 "openai.error" 并直接使用 Exception
             st.error(f"OpenAI API Error: {e}")
         except Exception as e:
             st.error(f"An unexpected error occurred: {e}")
