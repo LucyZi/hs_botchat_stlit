@@ -33,38 +33,28 @@ for message in st.session_state.messages:
 
 # Create a chat input field to allow the user to enter a message. This will display
 # automatically at the bottom of the page.
-if prompt := st.chat_input("What is up?"):
+if prompt := st.chat_input("Ask a question about the data or anything else:"):
 
     # Store and display the current prompt.
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Extract information from the CSV data based on the user's input
-    response = "I couldn't find any matching information in the data."
+    # Generate a response using the OpenAI API with additional context about the data
+    messages = [
+        {"role": "system", "content": "You are a data expert who can help answer questions about a dataset."},
+        {"role": "system", "content": f"The dataset contains the following columns: {', '.join(data.columns)}"},
+        {"role": "system", "content": "Please answer the user's question based on the dataset or provide insights where possible."},
+    ] + st.session_state.messages
 
-    for col in data.columns:
-        if col.lower() in prompt.lower():
-            response = f"Here is the information from the '{col}' column:\n\n{data[col].to_string(index=False)}"
-            break
-
-    # If no specific column is mentioned, you can provide a general summary or stats.
-    if response == "I couldn't find any matching information in the data.":
-        summary_stats = data.describe().to_string()
-        response = f"I couldn't find a specific column mentioned, but here are some summary statistics:\n\n{summary_stats}"
-
-    # Generate a response using the OpenAI API.
-    stream = client.chat.completions.create(
+    response = client.chat.completions.create(
         model="gpt-4",
-        messages=[
-            {"role": m["role"], "content": m["content"]}
-            for m in st.session_state.messages
-        ],
-        stream=True,
+        messages=messages,
+        max_tokens=150,  # Adjust the max_tokens if needed
     )
 
-    # Stream the response to the chat using `st.write_stream`, then store it in 
-    # session state.
+    # Display the response in the chat
+    assistant_message = response.choices[0].message['content']
     with st.chat_message("assistant"):
-        st.markdown(response)
-    st.session_state.messages.append({"role": "assistant", "content": response})
+        st.markdown(assistant_message)
+    st.session_state.messages.append({"role": "assistant", "content": assistant_message})
