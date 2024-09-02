@@ -50,7 +50,7 @@ else:
                 ],
             )
 
-            assistant_message = response.choices[0].message['content']
+            assistant_message = response['choices'][0]['message']['content']
             st.session_state.messages.append({"role": "assistant", "content": assistant_message})
             st.markdown(f"**Assistant:** {assistant_message}")
 
