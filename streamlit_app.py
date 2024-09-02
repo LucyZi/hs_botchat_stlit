@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import openai
-import time
 
 # 显示标题和描述
 st.title("💬 Chatbot")
@@ -54,7 +53,5 @@ else:
             st.session_state.messages.append({"role": "assistant", "content": assistant_message})
             st.markdown(f"**Assistant:** {assistant_message}")
 
-        except openai.error.OpenAIError as e:  # 这里去掉 "openai.error" 并直接使用 Exception
-            st.error(f"OpenAI API Error: {e}")
-        except Exception as e:
-            st.error(f"An unexpected error occurred: {e}")
+        except Exception as e:  # 捕获所有异常
+            st.error(f"An error occurred: {e}")
